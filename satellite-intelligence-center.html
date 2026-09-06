@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>⚡ SATELLITE INTELLIGENCE CENTER</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        /* ===== RESET & BASE ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Inter:wght@300;400;600;700&display=swap');
+
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #0f1a2b;
+            --bg-panel: rgba(10, 20, 40, 0.85);
+            --border-glow: rgba(0, 255, 200, 0.15);
+            --accent-cyan: #00f0d4;
+            --accent-green: #00ff88;
+            --accent-amber: #ffb347;
+            --accent-red: #ff3b3b;
+            --text-primary: #e8f0f8;
+            --text-secondary: #8ab4d6;
+            --text-dim: #4a6a8a;
+            --font-display: 'Orbitron', monospace;
+            --font-mono: 'Share Tech Mono', monospace;
+            --font-body: 'Inter', sans-serif;
+        }
+
+        html,
+        body {
+            height: 100%;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 20, 40, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-cyan);
+            border-radius: 2px;
+            box-shadow: 0 0 12px rgba(0, 240, 212, 0.3);
+        }
+
+        /* ===== BACKGROUND GRID ===== */
+        #grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            background-image:
+                linear-gradient(rgba(0, 240, 212, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 212, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        /* ===== APP WRAPPER ===== */
+        #app {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 8px 12px 8px 12px;
+            gap: 8px;
+            background: radial-gradient(ellipse at 50% 20%, rgba(0, 60, 100, 0.10) 0%, transparent 70%);
+        }
+
+        /* ===== HEADER ===== */
+        #header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            background: rgba(10, 20, 40, 0.7);
+            border: 1px solid rgba(0, 240, 212, 0.12);
+            border-radius: 6px;
+            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+            min-height: 56px;
+            position: relative;
+            overflow: hidden;
+        }
+        #header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 10%;
+            width: 80%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+            opacity: 0.3;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .logo-icon {
+            font-size: 24px;
+            filter: drop-shadow(0 0 8px rgba(0, 240, 212, 0.4));
+        }
+        .logo-text {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: 3px;
+            background: linear-gradient(90deg, var(--accent-cyan), #4af0ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0, 240, 212, 0.2);
+        }
+        .logo-sub {
+            font-size: 10px;
+            color: var(--text-secondary);
+            letter-spacing: 2px;
+            font-weight: 300;
+            margin-left: 6px;
+            border-left: 1px solid rgba(0, 240, 212, 0.2);
+            padding-left: 12px;
+            -webkit-text-fill-color: var(--text-secondary);
+        }
+
+        .header-center {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+        .status-dot.online {
+            background: var(--accent-green);
+            box-shadow: 0 0 16px rgba(0, 255, 136, 0.5);
+        }
+        .status-dot.warning {
+            background: var(--accent-amber);
+            box-shadow: 0 0 16px rgba(255, 179, 71, 0.5);
+            animation-duration: 0.8s;
+        }
+        @keyframes pulse-dot {
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.4;
+                transform: scale(0.7);
+            }
+        }
+
+        .status-label {
+            font-size: 11px;
+            letter-spacing: 1.5px;
+            color: var(--text-secondary);
+            font-weight: 300;
+        }
+        .status-label span {
+            color: var(--accent-green);
+            font-weight: 600;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .header-right .clock {
+            color: var(--accent-cyan);
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: 1px;
+            text-shadow: 0 0 20px rgba(0, 240, 212, 0.15);
+        }
+        .header-right .date {
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+        .header-right .utc-badge {
+            background: rgba(0, 240, 212, 0.08);
+            padding: 2px 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 240, 212, 0.12);
+            font-size: 10px;
+            letter-spacing: 1px;
+        }
+
+        /* ===== MAIN LAYOUT ===== */
+        #main {
+            display: flex;
+            flex: 1;
+            gap: 10px;
+            min-height: 0;
+        }
+
+        /* ===== MAP PANEL ===== */
+        #map-panel {
+            flex: 1;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            border: 1px solid rgba(0, 240, 212, 0.08);
+            overflow: hidden;
+            position: relative;
+            min-width: 0;
+        }
+        #map-panel .map-overlay-label {
+            position: absolute;
+            bottom: 16px;
+            left: 16px;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 4px 12px;
+            border-radius: 4px;
+            border-left: 2px solid var(--accent-cyan);
+            pointer-events: none;
+        }
+        #map-panel .map-coords {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--accent-cyan);
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 4px 12px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+            pointer-events: none;
+            text-shadow: 0 0 12px rgba(0, 240, 212, 0.2);
+        }
+        #map-panel .map-crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0.4;
+        }
+        #map-panel .map-crosshair::before,
+        #map-panel .map-crosshair::after {
+            content: '';
+            position: absolute;
+            background: var(--accent-cyan);
+        }
+        #map-panel .map-crosshair::before {
+            width: 2px;
+            height: 30px;
+            top: -15px;
+            left: -1px;
+            box-shadow: 0 0 12px rgba(0, 240, 212, 0.3);
+        }
+        #map-panel .map-crosshair::after {
+            width: 30px;
+            height: 2px;
+            top: -1px;
+            left: -15px;
+            box-shadow: 0 0 12px rgba(0, 240, 212, 0.3);
+        }
+        .map-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9;
+            pointer-events: none;
+            border: 1px solid rgba(0, 240, 212, 0.08);
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            animation: ring-pulse 4s ease-in-out infinite;
+        }
+        .map-ring:nth-child(2) {
+            width: 200px;
+            height: 200px;
+            animation-delay: 0.5s;
+        }
+        .map-ring:nth-child(3) {
+            width: 300px;
+            height: 300px;
+            animation-delay: 1s;
+        }
+        @keyframes ring-pulse {
+            0%,
+            100% {
+                opacity: 0.3;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            50% {
+                opacity: 0.8;
+                transform: translate(-50%, -50%) scale(1.05);
+            }
+        }
+
+        #satellite-map {
+            width: 100%;
+            height: 100%;
+            background: #0a1628;
+        }
+        #satellite-map .leaflet-control-zoom {
+            border: 1px solid rgba(0, 240, 212, 0.15);
+            background: rgba(10, 20, 40, 0.7);
+            backdrop-filter: blur(8px);
+            border-radius: 4px;
+        }
+        #satellite-map .leaflet-control-zoom a {
+            color: var(--accent-cyan);
+            background: transparent;
+            border-bottom: 1px solid rgba(0, 240, 212, 0.08);
+        }
+        #satellite-map .leaflet-control-zoom a:hover {
+            background: rgba(0, 240, 212, 0.08);
+            color: #fff;
+        }
+        .leaflet-tile-pane {
+            filter: saturate(1.2) contrast(1.1) brightness(0.85);
+        }
+
+        /* ===== AFFAIRS PANEL ===== */
+        #affairs-panel {
+            width: 380px;
+            flex-shrink: 0;
+            background: rgba(10, 20, 40, 0.6);
+            border-radius: 6px;
+            border: 1px solid rgba(0, 240, 212, 0.06);
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(6px);
+            overflow: hidden;
+            min-width: 280px;
+        }
+        #affairs-panel .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(0, 240, 212, 0.06);
+            flex-shrink: 0;
+            background: rgba(0, 0, 0, 0.2);
+        }
+        #affairs-panel .panel-header h2 {
+            font-family: var(--font-display);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--accent-cyan);
+            text-shadow: 0 0 20px rgba(0, 240, 212, 0.1);
+        }
+        #affairs-panel .panel-header .badge {
+            font-size: 9px;
+            background: rgba(0, 240, 212, 0.08);
+            padding: 2px 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 240, 212, 0.1);
+            color: var(--text-secondary);
+            font-weight: 300;
+            letter-spacing: 0.5px;
+        }
+        #affairs-panel .panel-header .badge .count {
+            color: var(--accent-cyan);
+            font-weight: 700;
+        }
+
+        #news-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px 8px 6px 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .news-item {
+            padding: 10px 14px;
+            background: rgba(0, 30, 60, 0.25);
+            border-radius: 4px;
+            border-left: 2px solid rgba(0, 240, 212, 0.1);
+            transition: all 0.3s ease;
+            cursor: default;
+            animation: slide-in 0.4s ease-out;
+        }
+        .news-item:hover {
+            background: rgba(0, 240, 212, 0.04);
+            border-left-color: var(--accent-cyan);
+            transform: translateX(2px);
+        }
+        .news-item .title {
+            font-size: 13px;
+            font-weight: 400;
+            color: var(--text-primary);
+            line-height: 1.4;
+            margin-bottom: 4px;
+        }
+        .news-item .meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            color: var(--text-dim);
+            font-family: var(--font-mono);
+        }
+        .news-item .meta .source {
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+        }
+        .news-item .meta .time {
+            color: var(--text-dim);
+        }
+        .news-item .severity {
+            display: inline-block;
+            font-size: 8px;
+            padding: 1px 8px;
+            border-radius: 10px;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-right: 6px;
+        }
+        .severity.high {
+            background: rgba(255, 59, 59, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(255, 59, 59, 0.15);
+        }
+        .severity.medium {
+            background: rgba(255, 179, 71, 0.12);
+            color: var(--accent-amber);
+            border: 1px solid rgba(255, 179, 71, 0.12);
+        }
+        .severity.low {
+            background: rgba(0, 240, 212, 0.08);
+            color: var(--accent-cyan);
+            border: 1px solid rgba(0, 240, 212, 0.08);
+        }
+
+        @keyframes slide-in {
+            0% {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .news-loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            color: var(--text-dim);
+            font-size: 12px;
+            letter-spacing: 1px;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .news-loading .spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid rgba(0, 240, 212, 0.05);
+            border-top: 2px solid var(--accent-cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ===== TICKER ===== */
+        #ticker {
+            flex-shrink: 0;
+            height: 34px;
+            background: rgba(10, 20, 40, 0.6);
+            border: 1px solid rgba(0, 240, 212, 0.06);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+        }
+        #ticker .ticker-label {
+            font-family: var(--font-display);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--accent-red);
+            padding-right: 16px;
+            flex-shrink: 0;
+            text-shadow: 0 0 20px rgba(255, 59, 59, 0.2);
+            border-right: 1px solid rgba(255, 59, 59, 0.1);
+            margin-right: 16px;
+        }
+        #ticker .ticker-label .live {
+            animation: blink 1.2s ease-in-out infinite;
+        }
+        @keyframes blink {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.2;
+            }
+        }
+        #ticker .ticker-track {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            height: 100%;
+        }
+        #ticker .ticker-content {
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            height: 100%;
+            animation: scroll-ticker 40s linear infinite;
+            gap: 48px;
+        }
+        #ticker .ticker-content .tick-item {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 300;
+            letter-spacing: 0.3px;
+        }
+        #ticker .ticker-content .tick-item .highlight {
+            color: var(--accent-cyan);
+            font-weight: 400;
+        }
+        #ticker .ticker-content .tick-item .bullet {
+            color: var(--accent-red);
+            margin-right: 6px;
+        }
+        #ticker .ticker-content .tick-item .time-tag {
+            color: var(--text-dim);
+            font-size: 9px;
+            font-family: var(--font-mono);
+            margin-right: 8px;
+        }
+
+        @keyframes scroll-ticker {
+            0% {
+                transform: translateX(100%);
+            }
+            100% {
+                transform: translateX(-100%);
+            }
+        }
+        #ticker:hover .ticker-content {
+            animation-play-state: paused;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1024px) {
+            #affairs-panel {
+                width: 300px;
+                min-width: 200px;
+            }
+        }
+        @media (max-width: 768px) {
+            #main {
+                flex-direction: column;
+            }
+            #affairs-panel {
+                width: 100%;
+                max-height: 300px;
+                min-height: 200px;
+            }
+            .header-center {
+                display: none;
+            }
+            .logo-sub {
+                display: none;
+            }
+            .header-right .date {
+                display: none;
+            }
+            #header {
+                flex-wrap: wrap;
+                gap: 4px;
+                min-height: 48px;
+                padding: 6px 12px;
+            }
+            .header-right .clock {
+                font-size: 13px;
+            }
+            #ticker .ticker-label {
+                font-size: 8px;
+                padding-right: 10px;
+                margin-right: 10px;
+            }
+            #ticker .ticker-content .tick-item {
+                font-size: 10px;
+            }
+            .map-ring {
+                display: none;
+            }
+            #map-panel .map-coords {
+                font-size: 9px;
+                bottom: 8px;
+                right: 8px;
+                padding: 2px 8px;
+            }
+            #map-panel .map-overlay-label {
+                font-size: 8px;
+                bottom: 8px;
+                left: 8px;
+                padding: 2px 8px;
+            }
+        }
+        @media (max-width: 480px) {
+            #app {
+                padding: 4px 6px 4px 6px;
+                gap: 4px;
+            }
+            .logo-text {
+                font-size: 12px;
+                letter-spacing: 1.5px;
+            }
+            .logo-icon {
+                font-size: 18px;
+            }
+            .header-right .utc-badge {
+                display: none;
+            }
+            #affairs-panel {
+                max-height: 200px;
+                min-height: 150px;
+            }
+            #affairs-panel .panel-header h2 {
+                font-size: 10px;
+            }
+            .news-item .title {
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Grid overlay -->
+    <div id="grid-overlay"></div>
+
+    <!-- ===== APP ===== -->
+    <div id="app">
+
+        <!-- HEADER -->
+        <header id="header">
+            <div class="header-left">
+                <span class="logo-icon">🛰️</span>
+                <span class="logo-text">S.I.C.</span>
+                <span class="logo-sub">SATELLITE INTELLIGENCE CENTER</span>
+            </div>
+            <div class="header-center">
+                <span class="status-label">
+                    <span class="status-dot online" id="statusDot"></span>
+                    <span id="statusText">SYSTEM ONLINE</span>
+                </span>
+                <span class="status-label" style="font-size:10px; color:var(--text-dim);">
+                    SATELLITE: <span style="color:var(--accent-green);">🔗 LOCKED</span>
+                </span>
+                <span class="status-label" style="font-size:10px; color:var(--text-dim);">
+                    SIGNAL: <span style="color:var(--accent-cyan);">98%</span>
+                </span>
+            </div>
+            <div class="header-right">
+                <span class="utc-badge">UTC</span>
+                <span class="clock" id="clockDisplay">--:--:--</span>
+                <span class="date" id="dateDisplay">--- --, ----</span>
+            </div>
+        </header>
+
+        <!-- MAIN -->
+        <div id="main">
+
+            <!-- MAP PANEL -->
+            <div id="map-panel">
+                <div id="satellite-map"></div>
+                <div class="map-crosshair"></div>
+                <div class="map-ring"></div>
+                <div class="map-ring"></div>
+                <div class="map-ring"></div>
+                <div class="map-overlay-label">◈ SAT VIEW · 24/7 SURVEILLANCE</div>
+                <div class="map-coords" id="mapCoords">LAT 0.0000 · LON 0.0000</div>
+            </div>
+
+            <!-- AFFAIRS PANEL -->
+            <div id="affairs-panel">
+                <div class="panel-header">
+                    <h2>🌍 WORLD AFFAIRS</h2>
+                    <span class="badge">LIVE · <span class="count" id="newsCount">0</span> UPDATES</span>
+                </div>
+                <div id="news-list">
+                    <div class="news-loading">
+                        <div class="spinner"></div>
+                        <span>ACQUIRING INTELLIGENCE...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TICKER -->
+        <div id="ticker">
+            <div class="ticker-label"><span class="live">●</span> BREAKING</div>
+            <div class="ticker-track">
+                <div class="ticker-content" id="tickerContent">
+                    <!-- populated by JS -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ===== SCRIPTS ===== -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+    </script>
+    <script>
+        // ============================================================
+        // 1. CLOCK
+        // ============================================================
+        function updateClock() {
+            const now = new Date();
+            const utc = now.toUTCString().split(' ')[4];
+            document.getElementById('clockDisplay').textContent = utc;
+            const dateStr = now.toUTCString().split(' ').slice(0, 4).join(' ');
+            document.getElementById('dateDisplay').textContent = dateStr;
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        // ============================================================
+        // 2. SATELLITE MAP (Leaflet)
+        // ============================================================
+        const map = L.map('satellite-map', {
+            center: [20.0, 0.0],
+            zoom: 2,
+            zoomControl: true,
+            attributionControl: false,
+            fadeAnimation: true,
+            zoomAnimation: true,
+        });
+
+        // Esri Satellite
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'Esri',
+            crossOrigin: true,
+        }).addTo(map);
+
+        // Subtle overlay grid
+        L.tileLayer(
+            'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19,
+                opacity: 0.15,
+                attribution: '',
+            }).addTo(map);
+
+        // Coordinate display
+        map.on('move', function() {
+            const center = map.getCenter();
+            document.getElementById('mapCoords').textContent =
+                `LAT ${center.lat.toFixed(4)} · LON ${center.lng.toFixed(4)}`;
+        });
+
+        // Custom zoom controls styling
+        setTimeout(() => {
+            document.querySelectorAll('.leaflet-control-zoom a').forEach(el => {
+                el.style.color = '#00f0d4';
+                el.style.background = 'rgba(10,20,40,0.5)';
+                el.style.borderColor = 'rgba(0,240,212,0.1)';
+            });
+        }, 100);
+
+        // ============================================================
+        // 3. NEWS & AFFAIRS
+        // ============================================================
+        const newsList = document.getElementById('news-list');
+        const tickerContent = document.getElementById('tickerContent');
+        const newsCount = document.getElementById('newsCount');
+
+        // ---- Simulated / fallback news ----
+        const FALLBACK_NEWS = [
+            { title: 'UN Security Council convenes emergency session over escalating tensions in Eastern Europe',
+                source: 'Reuters', time: '12:34 UTC', severity: 'high' },
+            { title: 'China announces new trade corridor connecting Central Asia to the Arabian Sea',
+                source: 'Xinhua', time: '11:52 UTC', severity: 'medium' },
+            { title: 'US intelligence reports increased naval activity in the South China Sea',
+                source: 'AP', time: '11:10 UTC', severity: 'high' },
+            { title: 'EU approves €50 billion aid package for Ukraine reconstruction',
+                source: 'BBC', time: '10:45 UTC', severity: 'medium' },
+            { title: 'Russia and North Korea sign mutual defense treaty',
+                source: 'TASS', time: '10:02 UTC', severity: 'high' },
+            { title: 'India launches new spy satellite for border surveillance',
+                source: 'NDTV', time: '09:28 UTC', severity: 'low' },
+            { title: 'Middle East peace talks resume in Cairo with renewed urgency',
+                source: 'Al Jazeera', time: '08:55 UTC', severity: 'medium' },
+            { title: 'Brazil, Russia, India, China, South Africa agree on new development bank initiatives',
+                source: 'Bloomberg', time: '08:10 UTC', severity: 'low' },
+            { title: 'Cyber attack targets NATO communications network — investigation underway',
+                source: 'FT', time: '07:45 UTC', severity: 'high' },
+            { title: 'Japan and Philippines sign defense cooperation agreement',
+                source: 'Kyodo', time: '07:12 UTC', severity: 'medium' },
+            { title: 'UK announces new carrier strike group deployment to Indo-Pacific',
+                source: 'The Guardian', time: '06:30 UTC', severity: 'medium' },
+            { title: 'Turkey mediates grain deal renewal between Russia and Ukraine',
+                source: 'TRT', time: '05:55 UTC', severity: 'low' },
+            { title: 'Iran unveils new hypersonic missile — regional concerns grow',
+                source: 'Press TV', time: '05:20 UTC', severity: 'high' },
+            { title: 'African Union calls for urgent climate action funding at summit',
+                source: 'VOA', time: '04:45 UTC', severity: 'low' },
+            { title: 'SpaceX launches classified US military satellite payload',
+                source: 'SpaceNews', time: '04:02 UTC', severity: 'medium' },
+        ];
+
+        // ---- Fetch real RSS via proxy ----
+        async function fetchRealNews() {
+            const feeds = [
+                'http://feeds.bbci.co.uk/news/world/rss.xml',
+                'https://www.aljazeera.com/xml/rss/all.xml',
+            ];
+            const allItems = [];
+
+            for (const feedUrl of feeds) {
+                try {
+                    const proxy =
+                        `https://api.allorigins.win/raw?url=${encodeURIComponent(feedUrl)}`;
+                    const resp = await fetch(proxy, { signal: AbortSignal.timeout(6000) });
+                    if (!resp.ok) continue;
+                    const xml = await resp.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(xml, 'text/xml');
+                    const items = doc.querySelectorAll('item');
+                    for (const item of items) {
+                        const title = item.querySelector('title')?.textContent?.trim() || '';
+                        if (!title || title.length < 10) continue;
+                        const pubDate = item.querySelector('pubDate')?.textContent?.trim() || '';
+                        const source = new URL(feedUrl).hostname.replace('www.', '').split('.')[0];
+                        let time = '--:-- UTC';
+                        if (pubDate) {
+                            try {
+                                const d = new Date(pubDate);
+                                time = d.toUTCString().split(' ')[4] + ' UTC';
+                            } catch (_) {}
+                        }
+                        allItems.push({
+                            title: title.replace(/&#[0-9]+;/g, '').replace(/&[a-z]+;/g, ''),
+                            source: source.charAt(0).toUpperCase() + source.slice(1),
+                            time: time,
+                            severity: Math.random() > 0.7 ? 'high' : Math.random() > 0.5 ? 'medium' : 'low',
+                        });
+                    }
+                } catch (_) { /* ignore */ }
+            }
+
+            // remove duplicates by title
+            const seen = new Set();
+            const unique = [];
+            for (const item of allItems) {
+                const key = item.title.slice(0, 60);
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    unique.push(item);
+                }
+            }
+            return unique.slice(0, 30);
+        }
+
+        // ---- Render news ----
+        function renderNews(items) {
+            newsList.innerHTML = '';
+            if (!items || items.length === 0) {
+                newsList.innerHTML = `
+                    <div class="news-loading">
+                        <span style="font-size:28px;">📡</span>
+                        <span>AWAITING SIGNAL...</span>
+                    </div>
+                `;
+                newsCount.textContent = '0';
+                return;
+            }
+
+            // Sort: high severity first, then by time (if available)
+            const sorted = [...items].sort((a, b) => {
+                const order = { high: 0, medium: 1, low: 2 };
+                if (order[a.severity] !== order[b.severity]) return order[a.severity] - order[b.severity];
+                return 0;
+            });
+
+            sorted.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'news-item';
+                div.innerHTML = `
+                    <div class="title">
+                        <span class="severity ${item.severity}">${item.severity.toUpperCase()}</span>
+                        ${item.title}
+                    </div>
+                    <div class="meta">
+                        <span class="source">${item.source}</span>
+                        <span class="time">${item.time}</span>
+                    </div>
+                `;
+                newsList.appendChild(div);
+            });
+
+            newsCount.textContent = sorted.length;
+        }
+
+        // ---- Render ticker ----
+        function renderTicker(items) {
+            tickerContent.innerHTML = '';
+            if (!items || items.length === 0) {
+                tickerContent.innerHTML =
+                    `<span class="tick-item"><span class="bullet">◆</span> STANDING BY FOR INTELLIGENCE FEED</span>`;
+                return;
+            }
+            // Show top 15 in ticker
+            const tickItems = items.slice(0, 15);
+            tickItems.forEach(item => {
+                const span = document.createElement('span');
+                span.className = 'tick-item';
+                const sev = item.severity === 'high' ? '🔴' : item.severity === 'medium' ? '🟠' : '🔵';
+                span.innerHTML =
+                    `<span class="time-tag">${item.time}</span> ${sev} ${item.title} <span style="color:var(--text-dim);font-size:10px;">— ${item.source}</span>`;
+                tickerContent.appendChild(span);
+            });
+            // Duplicate for seamless loop
+            const clone = tickerContent.cloneNode(true);
+            tickerContent.parentNode.appendChild(clone);
+        }
+
+        // ---- Main news update ----
+        let allNews = [...FALLBACK_NEWS];
+        let lastUpdate = 0;
+
+        async function updateNews() {
+            // Show loading if empty
+            if (allNews.length === 0) {
+                newsList.innerHTML = `
+                    <div class="news-loading">
+                        <div class="spinner"></div>
+                        <span>ACQUIRING INTELLIGENCE...</span>
+                    </div>
+                `;
+            }
+
+            try {
+                const real = await fetchRealNews();
+                if (real && real.length > 0) {
+                    allNews = real;
+                } else {
+                    // keep fallback, but shuffle a bit
+                    allNews = [...FALLBACK_NEWS].sort(() => Math.random() - 0.5);
+                }
+            } catch (_) {
+                allNews = [...FALLBACK_NEWS].sort(() => Math.random() - 0.5);
+            }
+
+            renderNews(allNews);
+            renderTicker(allNews);
+            lastUpdate = Date.now();
+        }
+
+        // ---- Initial load & refresh every 60s ----
+        updateNews();
+        setInterval(updateNews, 60000);
+
+        // ---- Status dot blink on news update ----
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        setInterval(() => {
+            statusDot.className = 'status-dot online';
+            statusText.textContent = 'SYSTEM ONLINE';
+        }, 5000);
+
+        // ============================================================
+        // 4. RESPONSIVE MAP RESIZE
+        // ============================================================
+        setTimeout(() => map.invalidateSize(), 300);
+        window.addEventListener('resize', () => {
+            setTimeout(() => map.invalidateSize(), 200);
+        });
+
+        // ============================================================
+        // 5. KEYBOARD SHORTCUTS (for flair)
+        // ============================================================
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'r' || e.key === 'R') {
+                updateNews();
+                statusDot.className = 'status-dot warning';
+                statusText.textContent = 'REFRESHING...';
+                setTimeout(() => {
+                    statusDot.className = 'status-dot online';
+                    statusText.textContent = 'SYSTEM ONLINE';
+                }, 1200);
+            }
+            if (e.key === 'f' || e.key === 'F') {
+                map.setView([20, 0], 2);
+            }
+        });
+
+        console.log('🛰️ S.I.C. — Satellite Intelligence Center initialized');
+        console.log('📡 Press [R] to refresh news · [F] to reset map view');
+    </script>
+</body>
+</html>
